@@ -1,0 +1,40 @@
+%% Ensemble_classify_vector
+% Inputs: 
+% classifiers = a struct of multiple classifiers
+% x = vector for generating scores
+% Outputs: 
+% y_individual = a matrix of scores of all
+% y_sum = sum of scores of all classifiers on x (sum of y_individual)
+
+%% BEGIN
+function [y_sum, y_individual]=Ensemble_classify_vector(classifiers,x)
+
+span=1;
+nbclassifier=length(classifiers);
+y_individual = zeros(length(x),nbclassifier);
+y_sum = zeros(length(x),1);   
+
+for ii=1:nbclassifier 
+        xt=x;
+        xsup=classifiers(ii).xsup;
+        w=classifiers(ii).w;
+        b=classifiers(ii).b;
+        mnormalize=classifiers(ii).mnormalize;
+        stdnormalize=classifiers(ii).stdnormalize;
+        [~,xt]=normalize1([],xt,[],[],[],[],mnormalize,stdnormalize,'normal');
+     
+        if ~isfield(classifiers,'kernel')  || ~isfield(classifiers,'kerneloption')
+            kernel='poly';
+            kerneloption=1;
+        else
+            kernel=classifiers(ii).kernel;
+            kerneloption=classifiers(ii).kerneloption;
+        end;
+        
+        y=svmval(xt,xsup,w,b,kernel,kerneloption,span);
+        y_sum = y_sum + y; 
+        y_individual(:,ii) = y;
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end;
+end
+%% END

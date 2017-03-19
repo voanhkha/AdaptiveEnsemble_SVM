@@ -1,0 +1,16 @@
+%% join_mat_files: 
+
+% Usage: join variables x and y in "files", then save to 'filesave'
+
+function join_mat_files(dir, files, filesave)
+
+x_concat = []; y_concat = [];
+
+for i = 1:length(files)
+    load([dir files{i}])
+    x_concat = [x_concat; x];
+    y_concat = [y_concat; y];
+end
+x = x_concat; y = y_concat;
+  save(filesave , 'x', 'y')
+end

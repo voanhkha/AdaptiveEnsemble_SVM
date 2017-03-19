@@ -1,0 +1,120 @@
+
+
+function [y_sum y]=Classify_letter(fileclassifier,x,...
+    typesdataset, adaptive_learning,dynamic_stopping)
+
+span=1;
+
+switch typedataset
+    case 'BCI2'
+        matrix=['ABCDEF';'GHIJKL';'MNOPQR';'STUVWX';'YZ1234';'56789_'];
+    case 'BCI3'
+        matrix=['ABCDEF';'GHIJKL';'MNOPQR';'STUVWX';'YZ1234';'56789_'];
+    case 'Akimpech'
+        matrix=['ABCDEF';'GHIJKL';'MNOPQR';'STUVWX';'YZ1234';'56789_']';
+end
+nbilluminationperletter=180;
+load(char(fileclassifier(1))) 
+nbclassifier=length(classifier);
+kword=1;
+nbcharacter=0;
+resultlettre=[]; resultlettre_blda=[];
+
+    score = zeros(nbilluminationperletter, nbclassifier);
+    vote=zeros(6,6,length(nbshotvec));
+    %---------------------------------------------
+    for ii=1:nbclassifier % total of 17 ensemble classifiers
+        xt=x;
+        xsup=classifier(ii).xsup;
+        w=classifier(ii).w;
+        b=classifier(ii).b;
+        mnormalize=classifier(ii).mnormalize;
+        stdnormalize=classifier(ii).stdnormalize;
+        channel=classifier(ii).channel;
+        [~,xt]=normalize1([],xt,[],[],[],[],mnormalize,stdnormalize,'normal');
+     
+        if ~isfield(classifier,'kernel')  || ~isfield(classifier,'kerneloption')
+            kernel='poly';
+            kerneloption=1;
+        else
+            kernel=classifier(ii).kernel;
+            kerneloption=classifier(ii).kerneloption;
+        end;
+        
+        yptest=svmval(xt,xsup,w,b,kernel,kerneloption,span);
+        yptestall = yptestall + yptest; %yptestall: sum of all classifiers' scores  
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        score(:,ii) = yptest;
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        kk=1;
+        for nbshot=nbshotvec
+            [wordtest{ii,kk} votemat]=TestWord_Kha(yptest,code,nbshot,'sum',typedataset);
+ %           fprintf('%s\t',wordtest{ii,kk}); %for each classifier output       
+                [indlig,indcol]=find(matrix==wordtest{ii,kk});   
+                vote(indlig,indcol,kk)= vote(indlig,indcol,kk) +1;                  
+            kk=kk+1;
+        end;
+  %      fprintf('\n');
+    end; 
+  %  keyboard
+   %  AUCall=svmroccurve(sign(yptestall),y)
+    %----------------------------------------------------------------
+     %ADD THIS FOR OUTPUT:save(output_result_filepath,'score','code');
+    %----------------------------------------------------------------
+     %fprintf('---------------Ensemble Vote --------------------\n');
+    for kk=1:length(nbshotvec)
+        wordvote=''   ; maxvalue = []; 
+            [maxcol,indmaxcol]=max(max(vote(:,:,kk)));     
+            [aux,indmaxlig]=max(max(vote(:,:,kk)'));  
+            wordvote=strcat(wordvote,matrix(indmaxlig,indmaxcol));
+            %maxvalue = [maxvalue, maxcol];
+        %fprintf('%s\t',wordvote);  
+        %fprintf('%s\n',num2str(maxvalue));  
+    end;
+    %fprintf('\n');
+    %fprintf('---------------Sum Score--------------------\n');
+    iternbshot=1;
+    kkk=1;
+    for nbshot=nbshotvec
+        %%%%%%%% UNCOMMENT BELOW 2 LINES IF DO NOT USE ADJACENT Y%%%%%
+        y_adjacented = adjacenting(yptestall,code,delta);
+        [wordsum]=TestWord_Kha(y_adjacented,code,nbshot,'sum',typedataset);
+        [wordsum_blda] = TestWord_Kha(yptestall_blda,code,nbshot,'sum',typedataset);
+        %%%%%%% 
+  %      fprintf('%s\t',wordsum);
+        nberror(iternbshot)=nberror(iternbshot)+sum(char(target)~=wordsum);
+        iternbshot=iternbshot+1;
+        wordmat(kkk,:)=wordsum;
+        wordmat_blda(kkk,:)=wordsum_blda;
+        kkk=kkk+1;
+    end;
+ %   fprintf('| \t%s\t',target);
+    %fprintf('\n-----------------------------------------------\n');
+    resultlettre=[resultlettre wordmat];
+    resultlettre_blda=[resultlettre_blda wordmat_blda];
+    kword=kword+1;
+    nbcharacter=nbcharacter+length(target);
+    
+    % VOANHKHA added code
+    result{filenb} = score;
+      result_blda{filenb} = score_blda;
+%     result{filenb}.word_ensemble = wordtest;
+%     result{filenb}.word_sum = wordmat;
+%     result{filenb}.vote = vote;
+
+
+if nbcharacter~=0
+    % Affichage Resultats si la lettre cible est connu
+    for i=1:length(nbshotvec)
+        fprintf('%d \t\t',nberror(i))
+    end;
+    fprintf('Number of errors : \n');
+    for i=1:length(nbshotvec)
+        fprintf('%2.2f \t',nberror(i)/nbcharacter)
+        perf(i)=1-nberror(i)/nbcharacter;
+    end;
+    
+end
+
+end
+

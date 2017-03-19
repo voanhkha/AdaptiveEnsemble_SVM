@@ -1,0 +1,40 @@
+
+
+function [y_sum, y_individual]=Classify_vector(classifiers,x)
+
+span=1;
+
+nbilluminationperletter=180; 
+nbclassifier=length(classifiers);
+kword=1;
+nbcharacter=0;
+resultlettre=[]; resultlettre_blda=[];
+
+    score = zeros(nbilluminationperletter, nbclassifier);
+    vote=zeros(6,6,length(nbshotvec));
+    %---------------------------------------------
+    y_individual = zeros(length(x),nbclassifier);
+    for ii=1:nbclassifier 
+        xt=x;
+        xsup=classifier(ii).xsup;
+        w=classifier(ii).w;
+        b=classifier(ii).b;
+        mnormalize=classifier(ii).mnormalize;
+        stdnormalize=classifier(ii).stdnormalize;
+        [~,xt]=normalize1([],xt,[],[],[],[],mnormalize,stdnormalize,'normal');
+     
+        if ~isfield(classifier,'kernel')  || ~isfield(classifier,'kerneloption')
+            kernel='poly';
+            kerneloption=1;
+        else
+            kernel=classifier(ii).kernel;
+            kerneloption=classifier(ii).kerneloption;
+        end;
+        
+        y=svmval(xt,xsup,w,b,kernel,kerneloption,span);
+        y_sum = y_sum + y; 
+        y_individual(:,ii) = y;
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    end;
+end
+
